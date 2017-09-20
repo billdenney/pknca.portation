@@ -1,0 +1,19 @@
+Package: PKNCA.portation
+Title: Import and Export Data from PKNCA Using Data Standards
+Version: 0.0.0.9000
+Authors@R:
+    person("Bill", "Denney", email="wdenney@humanpredictions.com", role=c("aut", "cre"))
+Description: Import and export data to and from the PKNCA package.
+    While any tabular data can be used for PKNCA, standards can be
+    used for other programs and can simplify the import/export
+    process.  This package implements data standards and standard
+    program interface data requirements to bring data in and out of
+    PKNCA.
+Depends: R (>= 3.0), PKNCA
+License: AGPL-3
+Encoding: UTF-8
+LazyData: true
+URL: https://github.com/billdenney/pknca.portation
+BugReports: https://github.com/billdenney/pknca.portation/issues
+NeedsCompilation: no
+VignetteBuilder: knitr
