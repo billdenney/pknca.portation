@@ -402,3 +402,29 @@ write.NONMEMdata <- function(x, file, also_RDS=TRUE) {
   }
   invisible(x)
 }
+
+#' Rename NONMEMdata columns ensuring that name_map and groups are also
+#' updated.
+#' 
+#' @param x A NONMEMdata object
+#' @param value The new name vector
+#' @return An updated NONMEMdata object
+#' @export
+"names<-.NONMEMdata" <- function(x, value) {
+  names_orig <- names(x)
+  attr(x, "names") <- value
+  mask_changed <- value != names_orig
+  names_changed <- setNames(value[mask_changed],
+                            names_orig[mask_changed])
+  # Update group names
+  for (n in intersect(names(names_changed), attr(x, "groups"))) {
+    mask_match <- attr(x, "groups") %in% n
+    attr(x, "groups")[mask_match] <- unname(names_changed[n])
+  }
+  # Update name_map
+  for (n in intersect(names(names_changed), attr(x, "name_map"))) {
+    mask_match <- attr(x, "name_map") %in% n
+    attr(x, "name_map")[mask_match] <- unname(names_changed[n])
+  }
+  x
+}
