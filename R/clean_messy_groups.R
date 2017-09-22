@@ -49,7 +49,7 @@ clean_messy_groups <- function(data, keys, values, missing_value=NA) {
     ungroup()
 }
 
-#' @describein clean_messy_groups Both clean the groups and replace them
+#' @describeIn clean_messy_groups Both clean the groups and replace them
 #'   back in the original dataset.
 #' @export
 #' @importFrom dplyr left_join

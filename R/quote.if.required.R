@@ -28,7 +28,7 @@ quote.if.required <- function(x, qmethod=c("double", "escape"), sep=",", eol="\n
 #' @param ... Ignored
 #' @param qmethod,row.names,sep,eol See \code{write.csv}
 #' @param quote,append,dec Ignored (with a warning)
-#' @return
+#' @return The return value of \code{write.table}
 write.csv.minimal.quote <- function(x, file="", ..., qmethod=c("double", "escape"), row.names=FALSE, sep=",", eol="\n", quote, append, dec) {
   if (!missing(quote)) {
     warning("quote argument ignored")

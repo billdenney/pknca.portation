@@ -209,15 +209,15 @@ as.NONMEMreset.NONMEMdata <- function(object, ...) {
   ret
 }
 
-#' @describeIn Generate reset records for objects that can be made into
-#'   NONMEMdata objects
+#' @describeIn as.NONMEMreset Generate reset records for objects that
+#'   can be made into NONMEMdata objects
 #' @export
 as.NONMEMreset.default <- function(object, ...) {
  as.NONMEMreset(as.NONMEMdata(object, conc_cmt_map=NULL, dose_cmt_map=NULL), ...)
 }
 
-#' @describeIn Returns \code{NULL} (typically in case dose is not
-#'   present)
+#' @describeIn as.NONMEMreset Returns \code{NULL} (typically in case
+#'   dose is not present)
 #' @export
 as.NONMEMreset.NULL <- function(object, ...) {
   NULL
