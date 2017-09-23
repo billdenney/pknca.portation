@@ -16,6 +16,7 @@
 #' @export
 #' @importFrom rlang syms
 #' @importFrom dplyr filter_all group_by summarize_all ungroup "%>%"
+#' @importFrom methods as
 clean_messy_groups <- function(data, keys, values, missing_value=NA) {
   if (missing(values)) {
     values <- setdiff(names(data), keys)
@@ -41,7 +42,7 @@ clean_messy_groups <- function(data, keys, values, missing_value=NA) {
     summarize_all(function(x, missing_value) {
       ret <- unique(setdiff(x, missing_value))
       if (length(ret) == 0) {
-        ret <- class(missing_value, class(x))
+        ret <- methods::as(object=missing_value, Class=class(x))
       }
       ret
     },
