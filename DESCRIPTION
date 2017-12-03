@@ -10,7 +10,7 @@ Description: Import and export data to and from the PKNCA package.
     program interface data requirements to bring data in and out of
     PKNCA.
 Depends: R (>= 3.0), PKNCA
-Imports: dplyr
+Imports: dplyr, methods, rlang
 License: AGPL-3
 Encoding: UTF-8
 LazyData: true
