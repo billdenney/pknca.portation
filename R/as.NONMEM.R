@@ -303,7 +303,8 @@ rbind.NONMEMdata <- function(..., deparse.level=0) {
   ret <- dplyr::bind_rows(...)
   nonmem_col <- switchNames(name_map_master)
   # Order the data in a generally useful way.
-  sort_cols <- cbind(ret[,groups],
+  sort_cols <- cbind(as.data.frame(unclass(ret[,groups, drop=FALSE]),
+                                   stringsAsFactors=FALSE),
                      data.frame(XXX___1=ret[[nonmem_col["ID"]]],
                                 XXX___2=-is.na(ret[[nonmem_col["TIME"]]]),
                                 XXX___3=ret[[nonmem_col["TIME"]]],
