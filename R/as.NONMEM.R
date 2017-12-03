@@ -347,9 +347,9 @@ rbind.NONMEMdata <- function(..., deparse.level=0) {
 #' @param ...,stringsAsFactors Ignored (kept as arguments for
 #'   compatibility with the generic as.data.frame method)
 #' @return A data.frame (or similar object) as described in the details
-#' @export
 #' @importFrom dplyr arrange
 #' @importFrom dplyr "%>%"
+#' @export
 as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
   if (!inherits(x, "NONMEMdata")) {
     stop("x must be NONMEMdata")
@@ -363,33 +363,41 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
   if (!is.numeric(ret[[name_map["ID"]]])) {
     ret[[name_map["ID"]]] <- factor(ret[[name_map["ID"]]])
   }
-  x[[name_map["EXCLUDETEXT"]]] <- factor(x[[name_map["EXCLUDETEXT"]]])
+  # Convert all the groups to numeric if not already numeric
+  for (nm in groups) {
+    if (!is.numeric(ret[[nm]])) {
+      new_name <- paste0(nm, "_numeric")
+      groups_updated[groups_updated %in% nm] <- new_name
+      ret[[new_name]] <- factor(ret[[nm]])
+    }
+  }
+  ret[[name_map["EXCLUDETEXT"]]] <- factor(ret[[name_map["EXCLUDETEXT"]]])
   # Convert columns so that they should all be numeric or character
-  for (orig_name in names(x)) {
+  for (orig_name in names(ret)) {
     new_name <- orig_name
-    if (is.factor(x[[orig_name]])) {
+    if (is.factor(ret[[orig_name]])) {
       new_name <- paste0(orig_name, "_numeric")
-      ret[[new_name]] <- as.numeric(x[[orig_name]])
-      ret[[orig_name]] <- as.character(x[[orig_name]])
-    } else if (is.logical(x[[orig_name]])) {
-      ret[[orig_name]] <- as.numeric(x[[orig_name]])
-    } else if (is.numeric(x[[orig_name]])) {
+      ret[[new_name]] <- as.numeric(ret[[orig_name]])
+      ret[[orig_name]] <- as.character(ret[[orig_name]])
+    } else if (is.logical(ret[[orig_name]])) {
+      ret[[orig_name]] <- as.numeric(ret[[orig_name]])
+    } else if (is.numeric(ret[[orig_name]])) {
       # Do nothing
-    } else if (is.character(x[[orig_name]])) {
+    } else if (is.character(ret[[orig_name]])) {
       # Do nothing other than maybe a warning
       if (orig_name %in% name_map) {
-        warning("Character column mapped to value that should be numeric.  Mapping: ",
+        warning("Character column mapped to value that should be numeric.  Mapping with issue: ",
                 orig_name, "=", name_map_updated[name_map_updated == orig_name])
       }
     } else {
       # some other odd class
       if (orig_name %in% name_map_updated) {
-        warning("Column mapped to value that should be numeric.  Mapping: ",
+        warning("Column mapped to value that should be numeric.  Mapping with issue: ",
                 orig_name, "=", name_map_updated[name_map_updated == orig_name])
       }
       # convert the class to character so that it can (easily) go into
       # the data file.
-      ret[[orig_name]] <- as.character(x[[orig_name]])
+      ret[[orig_name]] <- as.character(ret[[orig_name]])
     }
     # Map to the numeric value instead of the character value
     if (orig_name %in% name_map_updated) {
