@@ -24,17 +24,17 @@ The data.frame will be sorted by ID, TIME (NA first then
   Columns will be converted to numeric with the following rules:
   
 \itemize{
-\item{numeric}{No conversion}
-\item{logical}{as.numeric (0 or 1)}
-\item{character}{No conversion, except for the ID column.  The ID
-column will be converted to a factor if it is not already numeric.}
-\item{factor}{as.numeric on the factor with a new name for the factor
-column.  If the factor column is mapped to a NONMEM column (often 
-used for ID), then the numeric column will be named with the NONMEM 
-mapping.  If the factor column is not named, the numbered column will
-have "_numeric" appended to the original column name, the
-factor will be converted to a character column}
-\item{any other class}{Coerce to character with as.character}
+  \item{numeric}{No conversion}
+  \item{logical}{as.numeric (0 or 1)}
+  \item{character}{No conversion, except for the ID column.  The ID
+    column will be converted to a factor if it is not already numeric.}
+  \item{factor}{as.numeric on the factor with a new name for the factor
+    column.  If the factor column is mapped to a NONMEM column (often 
+    used for ID), then the numeric column will be named with the NONMEM 
+    mapping.  If the factor column is not named, the numbered column will
+    have "_numeric" appended to the original column name, the
+    factor will be converted to a character column}
+  \item{any other class}{Coerce to character with as.character}
 }
 
 Column order will be ID, TIME, EVID, EXCLUDENUM, other numeric

@@ -11,9 +11,9 @@ as.NONMEMdata(object, ...)
 
 \method{as.NONMEMdata}{PKNCAdata}(object, ..., conc_cmt_map, dose_cmt_map)
 
-\method{as.NONMEMdata}{PKNCAconc}(object, ..., conc_cmt_map)
+\method{as.NONMEMdata}{PKNCAconc}(object, ..., conc_cmt_map = NULL)
 
-\method{as.NONMEMdata}{PKNCAdose}(object, ..., dose_cmt_map)
+\method{as.NONMEMdata}{PKNCAdose}(object, ..., dose_cmt_map = NULL)
 }
 \arguments{
 \item{object}{The object to make into a NONMEM-ready dataset.  To 
@@ -35,7 +35,8 @@ A data.frame or similar ready for export to a .csv file as a
 Convert a PKNCA object into a NONMEM-ready dataset
 }
 \details{
-The following "name_map" will be added:
+The attribute "NONMEM_column" will be added to columns to
+  define the following.
   
   For every data type:
   

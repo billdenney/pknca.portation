@@ -2,13 +2,13 @@
 % Please edit documentation in R/as.NONMEM.R
 \name{as.NONMEMreset}
 \alias{as.NONMEMreset}
-\alias{as.NONMEMreset.default}
+\alias{as.NONMEMreset.NONMEMdata}
 \alias{as.NONMEMreset.NULL}
 \title{Generate one NONMEM reset record for each grouping in a data set.}
 \usage{
 as.NONMEMreset(object, ...)
 
-\method{as.NONMEMreset}{default}(object, ...)
+\method{as.NONMEMreset}{NONMEMdata}(object, ...)
 
 \method{as.NONMEMreset}{NULL}(object, ...)
 }
@@ -30,8 +30,7 @@ Generate one NONMEM reset record for each grouping in a data set.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{default}: Generate reset records for objects that
-can be made into NONMEMdata objects
+\item \code{NONMEMdata}: Reset an entire dataset
 
 \item \code{NULL}: Returns \code{NULL} (typically in case
 dose is not present)

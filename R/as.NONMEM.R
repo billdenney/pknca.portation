@@ -1,3 +1,35 @@
+#' Extract the NONMEM-mapped columns from the names of the data
+#'
+#' @param object The object that may have NONMEM-named columns
+#' @return A named vector.  Names are the NONMEM names; values are the
+#'   data column names.
+#' @seealso \code{\link{set_NONMEM_name_map}}
+#' @export
+get_NONMEM_name_map <- function(object) {
+  unlist(get_column_attr(object, .attr="NONMEM_column"))
+}
+
+#' Extract the NONMEM-mapped columns from the names of the data
+#'
+#' @param object The object that may have NONMEM-named columns
+#' @param name_map A named vector.  Names are the NONMEM names; values
+#'   are the data column names.
+#' @param reset For any columns not named in \code{name_map}, unset the
+#'   "NONMEM_column" attribute.
+#' @return The object with columns updated to have attributes named
+#'   "NONMEM_column" with a value of the NONMEM column name.
+#' @seealso \code{\link{get_NONMEM_name_map}}
+#' @export
+#' @importFrom rlang UQS
+set_NONMEM_name_map <- function(object, name_map, reset=TRUE) {
+  args <- append(list(.data=object,
+                      .attr="NONMEM_column",
+                      .allow_multiple_values=FALSE,
+                      .clear=reset),
+                 as.list(name_map))
+  do.call(set_column_attr, args)
+}
+
 #' Convert a PKNCA object into a NONMEM-ready dataset
 #' 
 #' @param object The object to make into a NONMEM-ready dataset.  To 
@@ -10,7 +42,8 @@
 #' @return A data.frame or similar ready for export to a .csv file as a 
 #'   NONMEM-ready dataset with an attribute "name_map" for mapping the 
 #'   data.frame names to NONMEM names.
-#' @details The following "name_map" will be added:
+#' @details The attribute "NONMEM_column" will be added to columns to
+#'   define the following.
 #'   
 #'   For every data type:
 #'   
@@ -44,48 +77,53 @@
 #'   "CMT" in the data.frame.
 #'   
 #' @export
+#' @importFrom dplyr left_join
 as.NONMEMdata <- function(object, ...)
   UseMethod("as.NONMEMdata")
 
 #' @describeIn as.NONMEMdata Convert a PKNCAdata object to NONMEM data
 #' @export
+#' @importFrom dplyr full_join, left_join
 as.NONMEMdata.PKNCAdata <- function(object, ..., conc_cmt_map, dose_cmt_map) {
   conc <- as.NONMEMdata(object$conc, conc_cmt_map=conc_cmt_map)
   dose <- as.NONMEMdata(object$dose, dose_cmt_map=dose_cmt_map)
   resets <-
-    full_join(as.NONMEMreset(object$conc),
-              as.NONMEMreset(object$dose))
+    dplyr::full_join(as.NONMEMreset(conc),
+                     as.NONMEMreset(dose))
   # Dose may have a subset of the conc groups, so merge the conc groups
   # to potentially expand the dose data.
   dose <-
-    left_join(dose, unique(getGroups(object$conc)))
+    dplyr::left_join(dose, unique(getGroups(object$conc)))
   ret <- rbind.NONMEMdata(conc, dose, resets)
-  class(ret) <- unique(c("NONMEMdata_data", "NONMEMdata", class(ret)))
+  class(ret) <-
+    setdiff(unique(c("NONMEMdata_data", "NONMEMdata", class(ret))),
+            c("NONMEMdata_conc", "NONMEMdata_dose", "NONMEMdata_reset"))
   ret
 }
 
 #' @describeIn as.NONMEMdata Convert a PKNCAconc object to NONMEM data
 #' @export
-as.NONMEMdata.PKNCAconc <- function(object, ..., conc_cmt_map) {
+#' @importFrom dplyr left_join
+as.NONMEMdata.PKNCAconc <- function(object, ..., conc_cmt_map=NULL) {
   if (!is.null(conc_cmt_map)) {
     if (!("CMT" %in% names(conc_cmt_map))) {
       stop("conc_cmt_map must have a column named 'CMT'")
-    } else if (any(is.na(conc_cmt_map$CMT))) {
-      stop("CMT values cannot be NA")
+    } else if (any(is.na(conc_cmt_map[["CMT"]]))) {
+      stop("conc_cmt_map$CMT values cannot be NA")
     }
   }
   # Extract the column names of interest
   parsedForm <- parseFormula(object, require.two.sided=FALSE)
-  name_map <- c(ID=object$subject,
-                DV=all.vars(parsedForm$lhs),
-                TIME=all.vars(parsedForm$rhs),
-                EXCLUDETEXT=object$exclude,
-                EVID="EVID")
+  name_map <- c(CMT="CMT", EVID="EVID")
+  name_map[object$subject] <- "ID"
+  name_map[all.vars(parsedForm$lhs)] <- "DV"
+  name_map[all.vars(parsedForm$rhs)] <- "TIME"
+  name_map[object$exclude] <- "EXCLUDETEXT"
   ret <- object$data
   if (!is.null(conc_cmt_map)) {
     if (length(intersect(names(object$data), names(conc_cmt_map)))) {
       # If there are overlapping names, use them for the join
-      ret <- left_join(ret, conc_cmt_map)
+      ret <- dplyr::left_join(ret, conc_cmt_map)
     } else if (nrow(conc_cmt_map) == 1) {
       # Otherwise, bolt on the conc_cmt_map
       ret <- cbind(ret, conc_cmt_map)
@@ -95,9 +133,18 @@ as.NONMEMdata.PKNCAconc <- function(object, ..., conc_cmt_map) {
     if (any(is.na(ret$CMT))) {
       stop("Incomplete concentration compartment map, some rows are missing CMT value")
     }
+  } else {
+    if (!("CMT" %in% names(ret))) {
+      stop("Either conc_cmt_map must be provided or a CMT column must be given in the input object.")
+    } else if (any(is.na(ret[["CMT"]]))) {
+      stop("No CMT values may be NA")
+    } else if (!is.numeric(ret[["CMT"]]) |
+               is.factor(ret[["CMT"]])) {
+      stop("CMT must be numeric (and not a factor).")
+    }
   }
   ret$EVID <- 0
-  attr(ret, "name_map") <- name_map
+  ret <- set_NONMEM_name_map(object=ret, name_map=name_map)
   attr(ret, "groups") <- all.vars(parsedForm$groups)
   class(ret) <- c("NONMEMdata_conc", "NONMEMdata", class(ret))
   ret
@@ -105,41 +152,42 @@ as.NONMEMdata.PKNCAconc <- function(object, ..., conc_cmt_map) {
 
 #' @describeIn as.NONMEMdata Convert a PKNCAdose object to NONMEM data
 #' @export
-as.NONMEMdata.PKNCAdose <- function(object, ..., dose_cmt_map) {
+#' @importFrom dplyr left_join
+as.NONMEMdata.PKNCAdose <- function(object, ..., dose_cmt_map=NULL) {
   if (!is.null(dose_cmt_map)) {
     if (!("CMT" %in% names(dose_cmt_map))) {
       stop("dose_cmt_map must have a column named 'CMT'")
     } else if (any(is.na(dose_cmt_map$CMT))) {
-      stop("CMT values cannot be NA")
+      stop("dose_cmt_map CMT values cannot be NA")
     }
   }
   # Extract the column names of interest
   parsedForm <- parseFormula(object, require.two.sided=FALSE)
-  name_map <- c(ID=object$subject,
-                AMT=all.vars(parsedForm$lhs),
-                RATE="RATE",
+  name_map <- c(RATE="RATE",
                 II="II",
                 ADDL="ADDL",
-                TIME=all.vars(parsedForm$rhs),
-                EXCLUDETEXT=object$exclude,
                 EVID="EVID")
+  name_map[object$subject] <- "ID"
+  name_map[all.vars(parsedForm$lhs)] <- "AMT"
+  name_map[all.vars(parsedForm$rhs)] <- "TIME"
+  name_map[object$exclude] <- "EXCLUDETEXT"
   # While AMT and TIME are not required for PKNCA, they are required here
-  if (!("AMT" %in% names(name_map))) {
+  if (!("AMT" %in% name_map)) {
     stop("Cannot generate a NONMEMdata object when the dose amount is not given")
-  } else if (name_map["AMT"] == ".") {
+  } else if (names(name_map[name_map == "AMT"]) == ".") {
     stop("Cannot generate a NONMEMdata object when the dose amount is a period ('.')")
   }
-  if (!("TIME" %in% names(name_map))) {
+  if (!("TIME" %in% name_map)) {
     # I don't think that this can happen
-    stop("Cannot generate a NONMEMdata object when the time is not given")
-  } else if (name_map["TIME"] == ".") {
+    stop("Cannot generate a NONMEMdata object when the time is not given") # nocov
+  } else if (names(name_map[name_map == "TIME"]) == ".") {
     stop("Cannot generate a NONMEMdata object when the time is a period ('.')")
   }
   ret <- object$data
   if (!is.null(dose_cmt_map)) {
     if (length(intersect(names(object$data), names(dose_cmt_map)))) {
       # If there are overlapping names, use them for the join
-      ret <- left_join(ret, dose_cmt_map)
+      ret <- dplyr::left_join(ret, dose_cmt_map)
     } else if (nrow(dose_cmt_map) == 1) {
       # Otherwise, bolt on the dose_cmt_map
       ret <- cbind(ret, dose_cmt_map)
@@ -161,11 +209,11 @@ as.NONMEMdata.PKNCAdose <- function(object, ..., dose_cmt_map) {
     ret$RATE[mask_rate] <- ret[[name_map["AMT"]]][mask_rate]/duration[mask_rate]
   }
   # A 0 or missing for AMT is not valid (no dose); filter those out
-  mask_amt_0 <- ret[[name_map["AMT"]]] %in% c(NA, 0)
+  mask_amt_0 <- ret[[names(name_map[name_map == "AMT"])]] %in% c(NA, 0)
   if (any(mask_amt_0)) {
     ret <- ret[!mask_amt_0,,drop=FALSE]
   }
-  attr(ret, "name_map") <- name_map
+  ret <- set_NONMEM_name_map(object=ret, name_map=name_map)
   attr(ret, "groups") <- all.vars(parsedForm$groups)
   class(ret) <- c("NONMEMdata_dose", "NONMEMdata", class(ret))
   ret
@@ -190,30 +238,26 @@ as.NONMEMdata.NULL <- function(object, ...) {
 as.NONMEMreset <- function(object, ...)
   UseMethod("as.NONMEMreset")
 
+#' @describeIn as.NONMEMreset Reset an entire dataset
+#' @export
 as.NONMEMreset.NONMEMdata <- function(object, ...) {
-  name_map_orig <- attr(object, "name_map")
-  id_col <- na.omit(name_map_orig["ID"])
-  exclude_col <- name_map_orig["EXCLUDETEXT"]
-  time_col <- attr(object, "name_map")["TIME"]
+  name_map_orig <- get_NONMEM_name_map(object)
+  id_col <- na.omit(switchNames(name_map_orig)["ID"])
+  exclude_col <- switchNames(name_map_orig)["EXCLUDETEXT"]
+  time_col <- switchNames(name_map_orig)["TIME"]
   ret <- unique(object[,
                        unique(c(id_col, attr(object, "groups"))),
                        drop=FALSE])
-  ret[[name_map_orig["TIME"]]] <- NA_real_
-  ret[[name_map_orig["EVID"]]] <- 3
-  ret[[name_map_orig["EXCLUDETEXT"]]] <- NA_character_
-  attr(ret, "name_map") <- c(ID=id_col,
-                             name_map_orig[c("TIME", "EVID", "EXCLUDETEXT")])
+  ret[[switchNames(name_map_orig)["TIME"]]] <- NA_real_
+  ret[[switchNames(name_map_orig)["EVID"]]] <- 3
+  ret[[switchNames(name_map_orig)["EXCLUDETEXT"]]] <- NA_character_
+  ret <-
+    set_NONMEM_name_map(ret,
+                        name_map_orig[name_map_orig %in% c("ID", "TIME", "EVID", "EXCLUDETEXT")])
   attr(ret, "groups") <- attr(object, "groups")
   # Inherit the other classes from the original object
   class(ret) <- unique(c("NONMEMdata_reset", class(object)))
   ret
-}
-
-#' @describeIn as.NONMEMreset Generate reset records for objects that
-#'   can be made into NONMEMdata objects
-#' @export
-as.NONMEMreset.default <- function(object, ...) {
- as.NONMEMreset(as.NONMEMdata(object, conc_cmt_map=NULL, dose_cmt_map=NULL), ...)
 }
 
 #' @describeIn as.NONMEMreset Returns \code{NULL} (typically in case
@@ -231,11 +275,11 @@ as.NONMEMreset.NULL <- function(object, ...) {
 #' @return A new NONMEMdata object with the combined name_maps from the
 #'   source.
 #' @export
+#' @importFrom dplyr bind_rows
 rbind.NONMEMdata <- function(..., deparse.level=0) {
   name_map <-
     lapply(list(...),
-           attr,
-           which="name_map")
+           get_NONMEM_name_map)
   groups <-
     unique(
       do.call(
@@ -256,8 +300,17 @@ rbind.NONMEMdata <- function(..., deparse.level=0) {
     mapping_update <- setdiff(names(name_map_current), names(name_map_master))
     name_map_master[mapping_update] <- name_map_current[mapping_update]
   }
-  ret <- bind_rows(...)
-  attr(ret, "name_map") <- name_map_master
+  ret <- dplyr::bind_rows(...)
+  nonmem_col <- switchNames(name_map_master)
+  # Order the data in a generally useful way.
+  sort_cols <- cbind(ret[,groups],
+                     data.frame(XXX___1=ret[[nonmem_col["ID"]]],
+                                XXX___2=-is.na(ret[[nonmem_col["TIME"]]]),
+                                XXX___3=ret[[nonmem_col["TIME"]]],
+                                XXX___4=-ret[[nonmem_col["EVID"]]]))
+  ret <- ret[do.call(order, as.list(sort_cols)),]
+  rownames(ret) <- NULL
+  ret <- set_NONMEM_name_map(object=ret, name_map=name_map_master, reset=TRUE)
   attr(ret, "groups") <- groups
   class(ret) <- unique(c("NONMEMdata_reset", "NONMEMdata_reset", class(ret)))
   ret
@@ -270,17 +323,17 @@ rbind.NONMEMdata <- function(..., deparse.level=0) {
 #'   Columns will be converted to numeric with the following rules:
 #'   
 #' \itemize{
-#' \item{numeric}{No conversion}
-#' \item{logical}{as.numeric (0 or 1)}
-#' \item{character}{No conversion, except for the ID column.  The ID
-#' column will be converted to a factor if it is not already numeric.}
-#' \item{factor}{as.numeric on the factor with a new name for the factor
-#' column.  If the factor column is mapped to a NONMEM column (often 
-#' used for ID), then the numeric column will be named with the NONMEM 
-#' mapping.  If the factor column is not named, the numbered column will
-#' have "_numeric" appended to the original column name, the
-#' factor will be converted to a character column}
-#' \item{any other class}{Coerce to character with as.character}
+#'   \item{numeric}{No conversion}
+#'   \item{logical}{as.numeric (0 or 1)}
+#'   \item{character}{No conversion, except for the ID column.  The ID
+#'     column will be converted to a factor if it is not already numeric.}
+#'   \item{factor}{as.numeric on the factor with a new name for the factor
+#'     column.  If the factor column is mapped to a NONMEM column (often 
+#'     used for ID), then the numeric column will be named with the NONMEM 
+#'     mapping.  If the factor column is not named, the numbered column will
+#'     have "_numeric" appended to the original column name, the
+#'     factor will be converted to a character column}
+#'   \item{any other class}{Coerce to character with as.character}
 #' }
 #' 
 #' Column order will be ID, TIME, EVID, EXCLUDENUM, other numeric
@@ -296,7 +349,7 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
   if (!inherits(x, "NONMEMdata")) {
     stop("x must be NONMEMdata")
   }
-  name_map <- name_map_updated <- attr(x, "name_map")
+  name_map <- name_map_updated <- switchNames(get_NONMEM_name_map(object=x))
   groups <- groups_updated <- attr(x, "groups")
   ret <- x
   # Drop the NONEMEMdata class
@@ -307,32 +360,35 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
   }
   x[[name_map["EXCLUDETEXT"]]] <- factor(x[[name_map["EXCLUDETEXT"]]])
   # Convert columns so that they should all be numeric or character
-  original_names <- names(x)
-  for (i in seq_len(ncol(x))) {
-    if (is.factor(x[[i]])) {
-      new_name <- paste0(original_names[[i]], "_numeric")
-      ret[[new_name]] <- as.numeric(x[[i]])
-      # Map to the numeric value instead of the character value
-      if (original_names[[i]] %in% name_map_updated) {
-        name_map_updated[name_map_updated %in% original_names[[i]]] <- new_name
-      }
-      ret[[i]] <- as.character(x[[i]])
-    } else if (is.logical(x[[i]])) {
-      ret[[i]] <- as.numeric(x[[i]])
-    } else if (is.numeric(x[[i]])) {
+  for (orig_name in names(x)) {
+    new_name <- orig_name
+    if (is.factor(x[[orig_name]])) {
+      new_name <- paste0(orig_name, "_numeric")
+      ret[[new_name]] <- as.numeric(x[[orig_name]])
+      ret[[orig_name]] <- as.character(x[[orig_name]])
+    } else if (is.logical(x[[orig_name]])) {
+      ret[[orig_name]] <- as.numeric(x[[orig_name]])
+    } else if (is.numeric(x[[orig_name]])) {
       # Do nothing
-    } else if (is.character(x[[i]])) {
+    } else if (is.character(x[[orig_name]])) {
       # Do nothing other than maybe a warning
-      if (original_names[[i]] %in% name_map) {
+      if (orig_name %in% name_map) {
         warning("Character column mapped to value that should be numeric.  Mapping: ",
-                original_names[[i]], "=", name_map_updated[name_map_updated == original_names[[i]]])
+                orig_name, "=", name_map_updated[name_map_updated == orig_name])
       }
     } else {
-      if (original_names[[i]] %in% name_map_updated) {
-        warning("Character column mapped to value that should be numeric.  Mapping: ",
-                original_names[[i]], "=", name_map_updated[name_map_updated == original_names[[i]]])
+      # some other odd class
+      if (orig_name %in% name_map_updated) {
+        warning("Column mapped to value that should be numeric.  Mapping: ",
+                orig_name, "=", name_map_updated[name_map_updated == orig_name])
       }
-      ret[[i]] <- as.character(x[[i]])
+      # convert the class to character so that it can (easily) go into
+      # the data file.
+      ret[[orig_name]] <- as.character(x[[orig_name]])
+    }
+    # Map to the numeric value instead of the character value
+    if (orig_name %in% name_map_updated) {
+      name_map_updated[name_map_updated %in% orig_name] <- new_name
     }
   }
   ret[[name_map_updated["EXCLUDETEXT"]]][is.na(ret[[name_map_updated["EXCLUDETEXT"]]])] <- 0
@@ -351,15 +407,23 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
         setdiff(numeric_cols, numeric_col_order)))
   character_col_order <- sort(character_cols)
   ret <-
-    ret[order(ret[[name_map_updated["ID"]]],
-              -is.na(ret[[name_map_updated["TIME"]]]),
-              ret[[name_map_updated["TIME"]]],
-              -ret[[name_map_updated["EVID"]]],
-              ret$CMT),
-        c(numeric_col_order, character_col_order),
-        drop=FALSE]
+    ret[
+      do.call(
+        order,
+        as.list(
+          cbind(ret[,groups_updated],
+                data.frame(ret[[name_map_updated["ID"]]],
+                           -is.na(ret[[name_map_updated["TIME"]]]),
+                           ret[[name_map_updated["TIME"]]],
+                           -ret[[name_map_updated["EVID"]]],
+                           ret$CMT,
+                           stringsAsFactors=FALSE)))),
+      c(numeric_col_order, character_col_order),
+      drop=FALSE]
   rownames(ret) <- NULL
-  attr(ret, "name_map") <- name_map_updated
+  ret <- set_NONMEM_name_map(object=ret,
+                             name_map=switchNames(name_map_updated),
+                             reset=TRUE)
   attr(ret, "groups") <- groups_updated
   ret
 }
@@ -381,11 +445,14 @@ write.NONMEMdata <- function(x, file, also_RDS=TRUE) {
   x_arranged <- as.data.frame(x)
   numeric_cols <- names(x_arranged)[sapply(x_arranged, is.numeric)]
   text_cols <- setdiff(names(x_arranged), numeric_cols)
-  name_map <- attr(x_arranged, "name_map")
-  mapped_header <- setNames(paste(names(name_map),
-                                  column_name_cleanup(name_map),
-                                  sep="="),
-                            column_name_cleanup(name_map))
+  name_map <- get_NONMEM_name_map(object=x_arranged)
+  mapped_header <- name_map[names(name_map) != name_map]
+  mapped_header <-
+    setNames(
+      paste(mapped_header,
+            column_name_cleanup(names(mapped_header)),
+            sep="="),
+      column_name_cleanup(names(mapped_header)))
   nonmem_header <- setNames(column_name_cleanup(numeric_cols),
                             column_name_cleanup(numeric_cols))
   nonmem_header[names(mapped_header)] <- mapped_header
@@ -401,30 +468,4 @@ write.NONMEMdata <- function(x, file, also_RDS=TRUE) {
     saveRDS(x, file=paste0(file, ".RDS"))
   }
   invisible(x)
-}
-
-#' Rename NONMEMdata columns ensuring that name_map and groups are also
-#' updated.
-#' 
-#' @param x A NONMEMdata object
-#' @param value The new name vector
-#' @return An updated NONMEMdata object
-#' @export
-"names<-.NONMEMdata" <- function(x, value) {
-  names_orig <- names(x)
-  attr(x, "names") <- value
-  mask_changed <- value != names_orig
-  names_changed <- setNames(value[mask_changed],
-                            names_orig[mask_changed])
-  # Update group names
-  for (n in intersect(names(names_changed), attr(x, "groups"))) {
-    mask_match <- attr(x, "groups") %in% n
-    attr(x, "groups")[mask_match] <- unname(names_changed[n])
-  }
-  # Update name_map
-  for (n in intersect(names(names_changed), attr(x, "name_map"))) {
-    mask_match <- attr(x, "name_map") %in% n
-    attr(x, "name_map")[mask_match] <- unname(names_changed[n])
-  }
-  x
 }
