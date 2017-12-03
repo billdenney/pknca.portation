@@ -4,7 +4,7 @@
 \alias{write.NONMEMdata}
 \title{Write a NONMEMdata object to a .csv file ready for analysis}
 \usage{
-write.NONMEMdata(x, file, also_RDS = TRUE)
+write.NONMEMdata(x, file, also_RDS = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{x}{A NONMEMdata object}
@@ -13,6 +13,8 @@ write.NONMEMdata(x, file, also_RDS = TRUE)
 
 \item{also_RDS}{Also output an .RDS file with ".RDS" appended to the
 filename}
+
+\item{verbose}{Passed to as.data.frame.NONMEMdata}
 }
 \value{
 x (invisibly)

@@ -346,11 +346,12 @@ rbind.NONMEMdata <- function(..., deparse.level=0) {
 #' @param x The object to convert to a data.frame
 #' @param ...,stringsAsFactors Ignored (kept as arguments for
 #'   compatibility with the generic as.data.frame method)
+#' @param verbose Describe modifications made in detail (as messages).
 #' @return A data.frame (or similar object) as described in the details
 #' @importFrom dplyr arrange
 #' @importFrom dplyr "%>%"
 #' @export
-as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
+as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE, verbose=FALSE) {
   if (!inherits(x, "NONMEMdata")) {
     stop("x must be NONMEMdata")
   }
@@ -361,14 +362,20 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
   class(ret) <- setdiff(class(x), "NONMEMdata")
   # Convert the ID column to a factor if it's not already numeric
   if (!is.numeric(ret[[name_map["ID"]]])) {
+    if (verbose) {
+      message(sprintf("Converting ID column (%s) to a factor.",
+                      name_map["ID"]))
+    }
     ret[[name_map["ID"]]] <- factor(ret[[name_map["ID"]]])
   }
   # Convert all the groups to numeric if not already numeric
   for (nm in groups) {
-    if (!is.numeric(ret[[nm]])) {
-      new_name <- paste0(nm, "_numeric")
-      groups_updated[groups_updated %in% nm] <- new_name
-      ret[[new_name]] <- factor(ret[[nm]])
+    if (!is.numeric(ret[[nm]]) &
+        !is.factor(ret[[nm]])) {
+      if (verbose) {
+        message(sprintf("Converting grouping column (%s) to a factor.", nm))
+      }
+      ret[[nm]] <- factor(ret[[nm]])
     }
   }
   ret[[name_map["EXCLUDETEXT"]]] <- factor(ret[[name_map["EXCLUDETEXT"]]])
@@ -377,10 +384,18 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
     new_name <- orig_name
     if (is.factor(ret[[orig_name]])) {
       new_name <- paste0(orig_name, "_numeric")
+      if (verbose) {
+        message(sprintf("Generating numeric column from factor: %s becoming %s.",
+                        orig_name, new_name))
+      }
       ret[[new_name]] <- as.numeric(ret[[orig_name]])
       ret[[orig_name]] <- as.character(ret[[orig_name]])
     } else if (is.logical(ret[[orig_name]])) {
       ret[[orig_name]] <- as.numeric(ret[[orig_name]])
+      if (verbose) {
+        message(sprintf("Generating numeric column from logical column: %s",
+                        orig_name))
+      }
     } else if (is.numeric(ret[[orig_name]])) {
       # Do nothing
     } else if (is.character(ret[[orig_name]])) {
@@ -399,9 +414,13 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
       # the data file.
       ret[[orig_name]] <- as.character(ret[[orig_name]])
     }
-    # Map to the numeric value instead of the character value
+    # Map to the numeric value instead of the character value for NONMEM
+    # columns and groups.
     if (orig_name %in% name_map_updated) {
       name_map_updated[name_map_updated %in% orig_name] <- new_name
+    }
+    if (orig_name %in% groups_updated) {
+      groups_updated[groups_updated %in% orig_name] <- new_name
     }
   }
   ret[[name_map_updated["EXCLUDETEXT"]]][is.na(ret[[name_map_updated["EXCLUDETEXT"]]])] <- 0
@@ -447,17 +466,19 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE) {
 #' @param file The file to write to (see \code{write.csv} for details)
 #' @param also_RDS Also output an .RDS file with ".RDS" appended to the
 #'   filename
+#' @param verbose Passed to as.data.frame.NONMEMdata
 #' @details The output will be sorted based on the ID column, the TIME 
 #'   column, EVID (decreasing), CMT, then the group columns.
 #' @return x (invisibly)
 #' @export
-write.NONMEMdata <- function(x, file, also_RDS=TRUE) {
+write.NONMEMdata <- function(x, file, also_RDS=TRUE, verbose=FALSE) {
   column_name_cleanup <- function(x) {
     gsub("[^0-9A-Za-z]", "", x)
   }
-  x_arranged <- as.data.frame(x)
+  x_arranged <- as.data.frame(x, verbose=verbose)
   numeric_cols <- names(x_arranged)[sapply(x_arranged, is.numeric)]
   text_cols <- setdiff(names(x_arranged), numeric_cols)
+  x_arranged <- x_arranged[,c(numeric_cols, text_cols), drop=FALSE]
   name_map <- get_NONMEM_name_map(object=x_arranged)
   mapped_header <- name_map[names(name_map) != name_map]
   mapped_header <-

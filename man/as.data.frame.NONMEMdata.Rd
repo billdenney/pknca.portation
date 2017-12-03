@@ -4,13 +4,16 @@
 \alias{as.data.frame.NONMEMdata}
 \title{Convert a NONMEMdata object to a data frame}
 \usage{
-\method{as.data.frame}{NONMEMdata}(x, ..., stringsAsFactors = FALSE)
+\method{as.data.frame}{NONMEMdata}(x, ..., stringsAsFactors = FALSE,
+  verbose = FALSE)
 }
 \arguments{
 \item{x}{The object to convert to a data.frame}
 
 \item{..., stringsAsFactors}{Ignored (kept as arguments for
 compatibility with the generic as.data.frame method)}
+
+\item{verbose}{Describe modifications made in detail (as messages).}
 }
 \value{
 A data.frame (or similar object) as described in the details

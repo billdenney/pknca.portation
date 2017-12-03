@@ -402,8 +402,7 @@ test_that("as.data.frame.NONMEMdata", {
                                     volume=NA_real_,
                                     exclude=NA_character_,
                                     stringsAsFactors=FALSE),
-                         class = c("NONMEMdata_conc", 
-                                   "data.frame"),
+                         class = c("NONMEMdata_conc", "data.frame"),
                          groups = "SUBJECT"),
                info="Subject is left alone if already numeric")
 
@@ -425,9 +424,8 @@ test_that("as.data.frame.NONMEMdata", {
                                     exclude=NA_character_,
                                     SUBJECT="A",
                                     stringsAsFactors=FALSE),
-                         class = c("NONMEMdata_conc", 
-                                   "data.frame"),
-                         groups = "SUBJECT"),
+                         class = c("NONMEMdata_conc", "data.frame"),
+                         groups = "SUBJECT_numeric"),
                info="Subject is converted to a number if needed")
   
   my_conc <- PKNCAconc(CONC~TIME|SUBJECT,
@@ -437,7 +435,6 @@ test_that("as.data.frame.NONMEMdata", {
                                        SUBJECT="A",
                                        stringsAsFactors=FALSE))
   my_conc_data <- as.NONMEMdata.PKNCAconc(my_conc, conc_cmt_map=data.frame(CMT=1))
-  dput(as.data.frame(my_conc_data), file="c:/tmp/foo.log")
   expect_equal(as.data.frame(my_conc_data),
                structure(data.frame(SUBJECT_numeric=structure(1, NONMEM_column="ID"), 
                                     TIME=structure(0, NONMEM_column="TIME"),
@@ -451,8 +448,73 @@ test_that("as.data.frame.NONMEMdata", {
                                     exclude=NA_character_,
                                     SUBJECT="A",
                                     stringsAsFactors=FALSE),
-                         class = c("NONMEMdata_conc", 
-                                   "data.frame"),
-                         groups = "SUBJECT"),
+                         class = c("NONMEMdata_conc", "data.frame"),
+                         groups = "SUBJECT_numeric"),
                info="Logical values are converted to numbers")
+})
+
+context("write.NONMEMdata")
+
+test_that("write.NONMEMdata", {
+  my_conc <- PKNCAconc(CONC~TIME|SUBJECT,
+                       data=data.frame(CONC=1,
+                                       TIME=0,
+                                       SUBJECT=3,
+                                       stringsAsFactors=FALSE))
+  my_conc_data <- as.NONMEMdata.PKNCAconc(my_conc, conc_cmt_map=data.frame(CMT=1))
+  expect_output(write.NONMEMdata(my_conc_data, file=""),
+                regexp="SUBJECT,TIME,EVID,exclude_numeric,CMT,CONC,duration,volume,exclude\n3,0,0,0,1,1,0,.,.",
+                fixed=TRUE,
+                info="Simple writing completed as expected")
+  expect_message(write.NONMEMdata(my_conc_data, file=""),
+                 regexp="NONMEM Input:\n$INPUT ID=SUBJECT TIME EVID EXCLUDETEXT=excludenumeric CMT DV=CONC\n    duration volume",
+                 fixed=TRUE,
+                 info="NONMEM header is correctly described")
+
+  my_conc <- PKNCAconc(CONC~TIME|SUBJECT,
+                       data=data.frame(CONC=1,
+                                       TIME=0,
+                                       SUBJECT="A",
+                                       stringsAsFactors=FALSE))
+  my_conc_data <- as.NONMEMdata.PKNCAconc(my_conc, conc_cmt_map=data.frame(CMT=1))
+  expect_output(write.NONMEMdata(my_conc_data, file=""),
+                regexp="SUBJECT_numeric,TIME,EVID,exclude_numeric,CMT,CONC,duration,volume,exclude,SUBJECT\n1,0,0,0,1,1,0,.,.,A",
+                fixed=TRUE,
+                info="Subject to numeric completed as expected (SUBJECT is character)")
+  expect_message(write.NONMEMdata(my_conc_data, file=""),
+                 regexp="NONMEM Input:\n$INPUT ID=SUBJECTnumeric TIME EVID EXCLUDETEXT=excludenumeric CMT\n    DV=CONC duration volume",
+                 fixed=TRUE,
+                 info="NONMEM header is correctly described with subject to numeric (SUBJECT is character)")
+
+  my_conc <- PKNCAconc(CONC~TIME|SUBJECT,
+                       data=data.frame(CONC=1,
+                                       TIME=0,
+                                       SUBJECT=factor("A"),
+                                       stringsAsFactors=FALSE))
+  my_conc_data <- as.NONMEMdata.PKNCAconc(my_conc, conc_cmt_map=data.frame(CMT=1))
+  expect_output(write.NONMEMdata(my_conc_data, file=""),
+                regexp="SUBJECT_numeric,TIME,EVID,exclude_numeric,CMT,CONC,duration,volume,exclude,SUBJECT\n1,0,0,0,1,1,0,.,.,A",
+                fixed=TRUE,
+                info="Subject to numeric completed as expected (SUBJECT is factor)")
+  expect_message(write.NONMEMdata(my_conc_data, file=""),
+                 regexp="NONMEM Input:\n$INPUT ID=SUBJECTnumeric TIME EVID EXCLUDETEXT=excludenumeric CMT\n    DV=CONC duration volume",
+                 fixed=TRUE,
+                 info="NONMEM header is correctly described with subject to numeric (SUBJECT is factor)")
+
+  my_conc <- PKNCAconc(CONC~TIME|GROUP1+SUBJECT,
+                       data=data.frame(CONC=1,
+                                       TIME=0,
+                                       SUBJECT=factor("A"),
+                                       GROUP1="B",
+                                       stringsAsFactors=FALSE))
+  my_conc_data <- as.NONMEMdata.PKNCAconc(my_conc, conc_cmt_map=data.frame(CMT=1))
+  expect_output(write.NONMEMdata(my_conc_data, file=""),
+                regexp="SUBJECT_numeric,TIME,EVID,exclude_numeric,CMT,CONC,duration,GROUP1_numeric,volume,exclude,GROUP1,SUBJECT\n1,0,0,0,1,1,0,1,.,.,B,A",
+                fixed=TRUE,
+                info="Subject to numeric completed as expected (SUBJECT is factor)")
+  expect_message(write.NONMEMdata(my_conc_data, file=""),
+                 regexp="NONMEM Input:\n$INPUT ID=SUBJECTnumeric TIME EVID EXCLUDETEXT=excludenumeric CMT\n    DV=CONC duration GROUP1numeric volume",
+                 fixed=TRUE,
+                 info="NONMEM header is correctly described with subject to numeric (SUBJECT is factor)")
+  
 })
