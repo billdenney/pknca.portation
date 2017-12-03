@@ -74,6 +74,7 @@ set_column_attr <- function(.data, ..., .attr="label",
 
 #' @describeIn set_column_attr Get the value of an attribute for all columns.
 #' @export
+#' @importFrom stats setNames
 get_column_attr <- function(.data, .attr="label") {
   has_attr <-
     sapply(names(.data),
@@ -83,7 +84,7 @@ get_column_attr <- function(.data, .attr="label") {
            .attr=.attr)
   # use this so that output has the name
   has_attr_nm <- names(.data)[has_attr]
-  lapply(setNames(has_attr_nm, has_attr_nm),
+  lapply(stats::setNames(has_attr_nm, has_attr_nm),
          FUN=function(nm, .attr) {
            attr(.data[[nm]], .attr)
          },
@@ -96,6 +97,7 @@ get_column_attr <- function(.data, .attr="label") {
 #' @return x with the names put into the values and the values put into
 #'   the names.
 #' @seealso \code{\link{setNames}}
+#' @importFrom stats setNames
 switchNames <- function(x) {
-  setNames(names(x), x)
+  stats::setNames(names(x), x)
 }

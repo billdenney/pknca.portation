@@ -2,6 +2,7 @@
 #' 
 #' @param x The object to extract attributes from
 #' @param which A character string of attributes to preserve
+#' @param value A named list to assign into the attributes of \code{x}
 #' @return A list of attributes
 #' @export
 preserve_attributes <- function(x, which) {

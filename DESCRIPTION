@@ -1,6 +1,6 @@
 Package: PKNCA.portation
 Title: Import and Export Data from PKNCA Using Data Standards
-Version: 0.0.0.9006
+Version: 0.0.0.9007
 Authors@R:
     person("Bill", "Denney", email="wdenney@humanpredictions.com", role=c("aut", "cre"))
 Description: Import and export data to and from the PKNCA package.
@@ -9,7 +9,7 @@ Description: Import and export data to and from the PKNCA package.
     process.  This package implements data standards and standard
     program interface data requirements to bring data in and out of
     PKNCA.
-Depends: R (>= 3.0), PKNCA
+Depends: R (>= 3.0), PKNCA, testthat
 Imports: dplyr, methods, rlang
 License: AGPL-3
 Encoding: UTF-8

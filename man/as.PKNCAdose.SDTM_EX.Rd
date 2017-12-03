@@ -11,7 +11,7 @@ as.PKNCAdose.SDTM_EX(x, ..., fun_time_start_nominal = sdtm_time_start_nominal,
 \arguments{
 \item{x}{The SDTM object to convert}
 
-\item{...}{arguments passed to PKNCAconc}
+\item{...}{arguments passed to PKNCAdose}
 
 \item{fun_time_start_nominal, fun_time_end_nominal}{The function to
 calculate the nominal start and end times.}

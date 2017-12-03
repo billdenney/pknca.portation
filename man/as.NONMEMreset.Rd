@@ -14,6 +14,8 @@ as.NONMEMreset(object, ...)
 }
 \arguments{
 \item{object}{The object to use as the source for the reset record.}
+
+\item{...}{Ignored}
 }
 \value{
 A data.frame or similar object ready for 

@@ -84,6 +84,7 @@ as.NONMEMdata <- function(object, ...)
 #' @describeIn as.NONMEMdata Convert a PKNCAdata object to NONMEM data
 #' @export
 #' @importFrom dplyr full_join left_join
+#' @importFrom PKNCA getGroups
 as.NONMEMdata.PKNCAdata <- function(object, ..., conc_cmt_map, dose_cmt_map) {
   conc <- as.NONMEMdata(object$conc, conc_cmt_map=conc_cmt_map)
   dose <- as.NONMEMdata(object$dose, dose_cmt_map=dose_cmt_map)
@@ -93,7 +94,7 @@ as.NONMEMdata.PKNCAdata <- function(object, ..., conc_cmt_map, dose_cmt_map) {
   # Dose may have a subset of the conc groups, so merge the conc groups
   # to potentially expand the dose data.
   dose <-
-    dplyr::left_join(dose, unique(getGroups(object$conc)))
+    dplyr::left_join(dose, unique(PKNCA::getGroups(object$conc)))
   ret <- rbind.NONMEMdata(conc, dose, resets)
   class(ret) <-
     setdiff(unique(c("NONMEMdata_data", "NONMEMdata", class(ret))),
@@ -113,7 +114,7 @@ as.NONMEMdata.PKNCAconc <- function(object, ..., conc_cmt_map=NULL) {
     }
   }
   # Extract the column names of interest
-  parsedForm <- parseFormula(object, require.two.sided=FALSE)
+  parsedForm <- PKNCA::parseFormula(object, require.two.sided=FALSE)
   name_map <- c(CMT="CMT", EVID="EVID")
   name_map[object$subject] <- "ID"
   name_map[all.vars(parsedForm$lhs)] <- "DV"
@@ -153,6 +154,7 @@ as.NONMEMdata.PKNCAconc <- function(object, ..., conc_cmt_map=NULL) {
 #' @describeIn as.NONMEMdata Convert a PKNCAdose object to NONMEM data
 #' @export
 #' @importFrom dplyr left_join
+#' @importFrom PKNCA parseFormula
 as.NONMEMdata.PKNCAdose <- function(object, ..., dose_cmt_map=NULL) {
   if (!is.null(dose_cmt_map)) {
     if (!("CMT" %in% names(dose_cmt_map))) {
@@ -162,7 +164,7 @@ as.NONMEMdata.PKNCAdose <- function(object, ..., dose_cmt_map=NULL) {
     }
   }
   # Extract the column names of interest
-  parsedForm <- parseFormula(object, require.two.sided=FALSE)
+  parsedForm <- PKNCA::parseFormula(object, require.two.sided=FALSE)
   name_map <- c(RATE="RATE",
                 II="II",
                 ADDL="ADDL",
@@ -226,6 +228,7 @@ as.NONMEMdata.NULL <- function(object, ...) {
 #' Generate one NONMEM reset record for each grouping in a data set.
 #' 
 #' @param object The object to use as the source for the reset record.
+#' @param ... Ignored
 #' @return A data.frame or similar object ready for 
 #' 
 #'   \itemize{
@@ -240,9 +243,10 @@ as.NONMEMreset <- function(object, ...)
 
 #' @describeIn as.NONMEMreset Reset an entire dataset
 #' @export
+#' @importFrom stats na.omit
 as.NONMEMreset.NONMEMdata <- function(object, ...) {
   name_map_orig <- get_NONMEM_name_map(object)
-  id_col <- na.omit(switchNames(name_map_orig)["ID"])
+  id_col <- stats::na.omit(switchNames(name_map_orig)["ID"])
   exclude_col <- switchNames(name_map_orig)["EXCLUDETEXT"]
   time_col <- switchNames(name_map_orig)["TIME"]
   ret <- unique(object[,

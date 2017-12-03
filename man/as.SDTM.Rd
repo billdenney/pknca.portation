@@ -14,6 +14,8 @@ as.SDTM(x, ...)
 }
 \arguments{
 \item{x}{The object to convert}
+
+\item{...}{Ignored}
 }
 \value{
 An object with the same class and classes of the SDTM domain

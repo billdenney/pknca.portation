@@ -1,6 +1,7 @@
 #' Convert an object into an SDTM object
 #'
 #' @param x The object to convert
+#' @param ... Ignored
 #' @return An object with the same class and classes of the SDTM domain
 #'   (like "SDTM_PC") and "SDTM" classes added.
 #' @export
@@ -37,6 +38,7 @@ detect_SDTM <- function(x) {
   x
 }
 
+globalVariables(".")
 #' Calculate the nominal time from SDTM data
 #'
 #' @param x The object to extract the nominal time from
@@ -79,6 +81,7 @@ sdtm_time_end_nominal <- function(x, col_day_suffix="ENDY", col_time_suffix="TPT
 #' @return A PKNCAconc object
 #' @seealso \code{\link{as.PKNCAdose.SDTM_EX}}
 #' @export
+#' @importFrom PKNCA PKNCAconc
 as.PKNCAconc.SDTM_PC <- function(x, ...,
                                  fun_time_nominal=sdtm_time_nominal,
                                  fun_time_actual=NULL) {
@@ -94,14 +97,14 @@ as.PKNCAconc.SDTM_PC <- function(x, ...,
   if (!is.null(fun_time_actual)) {
     x$TIME_ACTUAL <- fun_time_actual(x)
   }
-  PKNCAconc(data=x, formula=PCSTRESN~TIME_NOMINAL|STUDYID+USUBJID,
-            subject="USUBJID", exclude="exclude", ...)
+  PKNCA::PKNCAconc(data=x, formula=PCSTRESN~TIME_NOMINAL|STUDYID+USUBJID,
+                   subject="USUBJID", exclude="exclude", ...)
 }
 
 #' Convert an SDTM_PC object to a PKNCAconc object
 #'
 #' @param x The SDTM object to convert
-#' @param ... arguments passed to PKNCAconc
+#' @param ... arguments passed to PKNCAdose
 #' @param fun_time_start_nominal,fun_time_end_nominal The function to
 #'   calculate the nominal start and end times.
 #' @param fun_time_start_actual,fun_time_end_actual The function to
@@ -109,6 +112,7 @@ as.PKNCAconc.SDTM_PC <- function(x, ...,
 #' @return A PKNCAdose object
 #' @seealso \code{\link{as.PKNCAconc.SDTM_PC}}
 #' @export
+#' @importFrom PKNCA PKNCAdose
 as.PKNCAdose.SDTM_EX <- function(x, ...,
                                  fun_time_start_nominal=sdtm_time_start_nominal,
                                  fun_time_end_nominal=sdtm_time_end_nominal,
@@ -116,24 +120,24 @@ as.PKNCAdose.SDTM_EX <- function(x, ...,
                                  fun_time_end_actual=NULL) {
   x$exclude <- NA_character_
   x$exclude[x$EXSTAT %in% "NOT DONE"] <- "NOT DONE"
-  x$TIME_START_NOMINAL <- fun_time_start_nominal(x)
+  x$TIME_NOMINAL <- fun_time_start_nominal(x)
   x$TIME_END_NOMINAL <- fun_time_end_nominal(x)
-  if (any(mask_nominal <- is.na(x$TIME_START_NOMINAL) & is.na(x$exclude))) {
+  if (any(mask_nominal <- is.na(x$TIME_NOMINAL) & is.na(x$exclude))) {
     stop("Error assigning nominal times.  The following rows are NA but not excluded:\n  ",
          paste(which(mask_nominal), collapse=", "))
   }
   if (!is.null(fun_time_start_actual)) {
-    x$TIME_START_ACTUAL <- fun_time_start_actual(x)
+    x$TIME_ACTUAL <- fun_time_start_actual(x)
   } else {
-    x$TIME_START_ACTUAL <- NA_real_
+    x$TIME_ACTUAL <- NA_real_
   }
   if (!is.null(fun_time_end_actual)) {
     x$TIME_END_ACTUAL <- fun_time_end_actual(x)
   } else {
     x$TIME_END_ACTUAL <- NA_real_
   }
-  x$DURATION_NOMINAL <- x$TIME_END_NOMINAL - x$TIME_START_NOMINAL
-  x$DURATION_ACTUAL <- x$TIME_END_ACTUAL - x$TIME_START_ACTUAL
-  PKNCAdose(data=x, formula=EXDOSE~TIME_START_NOMINAL|STUDYID+USUBJID,
-            exclude="exclude", route="EXROUTE", duration="DURATION_NOMINAL", ...)
+  x$DURATION_NOMINAL <- x$TIME_END_NOMINAL - x$TIME_NOMINAL
+  x$DURATION_ACTUAL <- x$TIME_END_ACTUAL - x$TIME_ACTUAL
+  PKNCA::PKNCAdose(data=x, formula=EXDOSE~TIME_NOMINAL|STUDYID+USUBJID,
+                   exclude="exclude", route="EXROUTE", duration="DURATION_NOMINAL", ...)
 }

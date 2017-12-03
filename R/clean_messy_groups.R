@@ -1,3 +1,5 @@
+globalVariables(".")
+
 #' Simplify data to a single value within a group
 #' 
 #' During dataset generation, sometimes data from different sources may 
@@ -15,7 +17,7 @@
 #' @return A dataset with one row per key and one value in each column.
 #' @export
 #' @importFrom rlang syms
-#' @importFrom dplyr filter_all group_by summarize_all ungroup "%>%"
+#' @importFrom dplyr filter_at group_by summarize_all ungroup "%>%" vars any_vars
 #' @importFrom methods as
 clean_messy_groups <- function(data, keys, values, missing_value=NA) {
   if (missing(values)) {
@@ -31,8 +33,8 @@ clean_messy_groups <- function(data, keys, values, missing_value=NA) {
       length(unique(setdiff(x, missing_value)))
     },
     missing_value=missing_value) %>%
-    filter_at(vars(!!! rlang::syms(values)),
-              any_vars(. > 1))
+    dplyr::filter_at(dplyr::vars(!!! rlang::syms(values)),
+                     dplyr::any_vars(. > 1))
   if (nrow(value_count)) {
     print(value_count)
     stop("Above rows cannot be simplified to a single data row")

@@ -13,6 +13,8 @@ preserve_attributes(x) <- value
 \item{x}{The object to extract attributes from}
 
 \item{which}{A character string of attributes to preserve}
+
+\item{value}{A named list to assign into the attributes of \code{x}}
 }
 \value{
 A list of attributes

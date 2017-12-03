@@ -29,6 +29,8 @@ quote.if.required <- function(x, qmethod=c("double", "escape"), sep=",", eol="\n
 #' @param qmethod,row.names,sep,eol See \code{write.csv}
 #' @param quote,append,dec Ignored (with a warning)
 #' @return The return value of \code{write.table}
+#' @export
+#' @importFrom utils write.table
 write.csv.minimal.quote <- function(x, file="", ..., qmethod=c("double", "escape"), row.names=FALSE, sep=",", eol="\n", quote, append, dec) {
   if (!missing(quote)) {
     warning("quote argument ignored")
@@ -66,7 +68,16 @@ write.csv.minimal.quote <- function(x, file="", ..., qmethod=c("double", "escape
                                    sep=sep,
                                    eol=eol)
   }
-  write.table(x, file=file, ..., append=FALSE, sep=sep, dec=".", eol=eol, col.names=cn, row.names=row.names, quote=FALSE)
+  utils::write.table(x,
+                     file=file,
+                     ...,
+                     append=FALSE,
+                     sep=sep,
+                     dec=".",
+                     eol=eol,
+                     col.names=cn,
+                     row.names=row.names,
+                     quote=FALSE)
 }
 
 #tmp <- data.frame('"abc'=1:3, "def,hij"=c("1,2", "3", '4"5'), klm=6:8)
