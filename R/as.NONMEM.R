@@ -83,7 +83,7 @@ as.NONMEMdata <- function(object, ...)
 
 #' @describeIn as.NONMEMdata Convert a PKNCAdata object to NONMEM data
 #' @export
-#' @importFrom dplyr full_join, left_join
+#' @importFrom dplyr full_join left_join
 as.NONMEMdata.PKNCAdata <- function(object, ..., conc_cmt_map, dose_cmt_map) {
   conc <- as.NONMEMdata(object$conc, conc_cmt_map=conc_cmt_map)
   dose <- as.NONMEMdata(object$dose, dose_cmt_map=dose_cmt_map)
