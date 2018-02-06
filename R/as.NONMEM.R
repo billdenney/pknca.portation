@@ -208,7 +208,7 @@ as.NONMEMdata.PKNCAdose <- function(object, ..., dose_cmt_map=NULL) {
   ret$RATE <- 0
   mask_rate <- !is.na(duration) & duration > 0
   if (any(mask_rate)) {
-    ret$RATE[mask_rate] <- ret[[name_map["AMT"]]][mask_rate]/duration[mask_rate]
+    ret$RATE[mask_rate] <- ret[[names(name_map[name_map == "AMT"])]][mask_rate]/duration[mask_rate]
   }
   # A 0 or missing for AMT is not valid (no dose); filter those out
   mask_amt_0 <- ret[[names(name_map[name_map == "AMT"])]] %in% c(NA, 0)
@@ -370,6 +370,9 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE, verbose=FAL
   }
   # Convert all the groups to numeric if not already numeric
   for (nm in groups) {
+    if (!(nm %in% names(ret))) {
+      stop("Group column '", nm, "' not found in the data.")
+    }
     if (!is.numeric(ret[[nm]]) &
         !is.factor(ret[[nm]])) {
       if (verbose) {
