@@ -464,21 +464,26 @@ as.data.frame.NONMEMdata <- function(x, ..., stringsAsFactors=FALSE, verbose=FAL
 }
 
 #' Write a NONMEMdata object to a .csv file ready for analysis
-#' 
+#'
 #' @param x A NONMEMdata object
 #' @param file The file to write to (see \code{write.csv} for details)
 #' @param also_RDS Also output an .RDS file with ".RDS" appended to the
 #'   filename
+#' @param add_rowid Add a column named "ROWID" which simply is
+#'   \code{1:nrow(x)}?
 #' @param verbose Passed to as.data.frame.NONMEMdata
-#' @details The output will be sorted based on the ID column, the TIME 
+#' @details The output will be sorted based on the ID column, the TIME
 #'   column, EVID (decreasing), CMT, then the group columns.
 #' @return x (invisibly)
 #' @export
-write.NONMEMdata <- function(x, file, also_RDS=TRUE, verbose=FALSE) {
+write.NONMEMdata <- function(x, file, also_RDS=TRUE, add_rowid=TRUE, verbose=FALSE) {
   column_name_cleanup <- function(x) {
     gsub("[^0-9A-Za-z]", "", x)
   }
   x_arranged <- as.data.frame(x, verbose=verbose)
+  if (add_rowid) {
+    x_arranged$ROWID <- 1:nrow(x_arranged)
+  }
   numeric_cols <- names(x_arranged)[sapply(x_arranged, is.numeric)]
   text_cols <- setdiff(names(x_arranged), numeric_cols)
   x_arranged <- x_arranged[,c(numeric_cols, text_cols), drop=FALSE]
