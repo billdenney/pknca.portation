@@ -507,7 +507,7 @@ write.NONMEMdata <- function(x, file, also_RDS=TRUE, add_rowid=TRUE, verbose=FAL
                           file=file,
                           na=".")
   if (also_RDS) {
-    saveRDS(x, file=paste0(file, ".RDS"))
+    saveRDS(x_arranged, file=paste0(file, ".RDS"))
   }
-  invisible(x)
+  invisible(x_arranged)
 }
