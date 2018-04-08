@@ -201,8 +201,16 @@ as.NONMEMdata.PKNCAdose <- function(object, ..., dose_cmt_map=NULL) {
     }
   }
   ret$EVID <- 1
-  ret$II <- 0
-  ret$ADDL <- 0
+  if ("II" %in% names(ret)) {
+    warning("Preserving 'II' column from input; this is not identical to the interpretation of PKNCA.")
+  } else {
+    ret$II <- 0
+  }
+  if ("ADDL" %in% names(ret)) {
+    warning("Preserving 'ADDL' column from input; this is not identical to the interpretation of PKNCA.")
+  } else {
+    ret$ADDL <- 0
+  }
   # Calculate the dosing rate
   duration <- ret[[object$columns$duration]]
   ret$RATE <- 0
